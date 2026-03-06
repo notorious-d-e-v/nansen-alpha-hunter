@@ -76,23 +76,43 @@ The initial alpha scan is a **screening tool**, not a buy signal. Every candidat
 
 **Takeaway:** Small `net_flow_1h_usd` ($0-5k) on tokens with existing SM presence is NOT a leading indicator. It's the tail end of the same lagging signal. **PARTIALLY INVALIDATED.**
 
-**Remaining hypothesis:** Large 1h inflows (>$10k+) on tokens with LOW existing trader count (1-3 wallets) might still be a valid leading signal — this represents genuinely *new* SM interest, not stragglers on an old trade. **UNTESTED.**
+**Remaining hypothesis:** Large 1h inflows (>$10k+) on tokens with LOW existing trader count (1-3 wallets) might still be a valid leading signal — this represents genuinely *new* SM interest, not stragglers on an old trade. → See Lesson 5.
 
 ---
 
-## Lesson 5: Sorting Strategy - What's Validated vs Hypotheses
+## Lesson 5: Single-Wallet Flow on Young Tokens = Deployer Activity
+
+**What we assumed:** Large 24h flow ($13.8k) + single SM wallet + 4-day-old token (MACHI) = the ideal leading signal. Fresh SM discovery of a new token.
+
+**What we found:** X-ray revealed MACHI's flows were deployer distribution, not organic accumulation:
+- $136k minted from Solana Mint → Bot, then distributed to multiple wallets including "Ahmadinejad Token Deployer"
+- $28.3k one-way to LP, $0 from exchanges
+- Top holders: 15% win rate (-$41k PnL), spam token trader (-$1.1k PnL)
+- Trade sizes tiny ($12-$224) — no real market
+
+**Why single-wallet flows on young tokens fail:** On tokens < 7 days old, the "SM wallet" making the large flow is often the deployer or an insider moving supply. Nansen may label these wallets as smart money based on historical activity, but the current flow is supply distribution, not genuine accumulation.
+
+**Takeaway:** When `trader_count = 1` and `token_age_days < 7`, check Transfers for mint/deployer chains before treating the flow as a buy signal. **CONFIRMED TRAP.**
+
+**Additional finding:** Server-side `trader_count` filter is not supported on SM Net Flow (returns 422). Must filter client-side.
+
+---
+
+## Lesson 6: Sorting Strategy - What's Validated vs Hypotheses
 
 ### Validated
 - `trader_count DESC` shows where SM *was* (lagging, often means exit phase) - **CONFIRMED**
-- Small `net_flow_1h_usd` on high-count tokens is noise, not a leading signal - **CONFIRMED**
+- Small `net_flow_1h_usd` ($0-5k) on high-count tokens is noise - **CONFIRMED**
+- Single-wallet flow on young tokens (< 7d) is usually deployer activity - **CONFIRMED**
+- Server-side `trader_count` filter not available; must filter client-side - **CONFIRMED**
 
 ### Hypotheses to Test
-- Large `net_flow_1h_usd` (>$10k) + low `trader_count` (1-3) = fresh SM entry - **UNTESTED**
+- Large `net_flow_1h_usd` (>$10k) + `trader_count` 2-5 + `token_age_days` > 14 = fresh SM entry - **UNTESTED** (refined: excludes deployer traps)
 - `balance_24h_percent_change DESC` on SM Holdings may show active accumulation - **UNTESTED**
 - `net_flow_7d_usd DESC` with `net_flow_1h_usd` near zero may signal fading interest - **UNTESTED**
 
 ### Working theory
-The alpha signal may not be in any single sort — it's in the **combination**: high recent flow + low historical trader count = new discovery. Tokens where SM is arriving (not where they've been). **Needs validation.**
+The alpha signal may not be in any single sort — it's in the **combination**: high recent flow + low historical trader count + token old enough to exclude deployer activity. Tokens where SM is arriving (not where they've been), with enough market history to verify legitimacy. **Needs validation — but the right conditions may not exist at every point in time (Lesson 7).**
 
 ---
 
@@ -139,7 +159,7 @@ The alpha signal may not be in any single sort — it's in the **combination**: 
 
 ---
 
-## Lesson 6: Alpha is Time-Dependent — Single Snapshots Aren't Enough
+## Lesson 7: Alpha is Time-Dependent — Single Snapshots Aren't Enough
 
 **What we observed:** Two full pipeline runs (scanner -> deep dive -> X-ray) produced zero actionable entries. Every candidate was in exit phase.
 
@@ -152,7 +172,8 @@ The alpha signal may not be in any single sort — it's in the **combination**: 
 ## What We Haven't Tested Yet
 
 - [x] Filtering by `net_flow_1h_usd DESC` to find fresh SM entries — **small flows are noise** (Lesson 4)
-- [ ] Filtering by `net_flow_1h_usd DESC` + `trader_count` 1-3 (large flow, low count = true fresh entry)
+- [x] Filtering by `net_flow_1h_usd DESC` + `trader_count` 1-3 — **single-wallet on young tokens is deployer trap** (Lesson 5)
+- [ ] Refined: large flow + trader_count 2-5 + token_age > 14d (excludes deployer traps)
 - [ ] Using `balance_24h_percent_change DESC` on SM Holdings for active accumulation
 - [ ] Cross-referencing SM DEX Trades with Flow Intel to confirm whale alignment
 - [ ] Tracking a token through time (run X-ray daily to detect phase transitions)
