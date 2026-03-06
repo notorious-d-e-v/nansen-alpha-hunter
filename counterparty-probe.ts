@@ -36,8 +36,7 @@ const TODAY = "2026-03-06";
 const MONTH_AGO = "2026-02-06";
 
 const TARGETS = [
-  { symbol: "PUNCH", address: "NV2RYH954cTJ3ckFUpvfqaQXU4ARqqDH3562nFSpump" },
-  { symbol: "LOBSTAR", address: "AVF9F4C4j8b1Kh4BmNHqybDaHgnZpJ7W7yLvL7hUpump" },
+  { symbol: "WHITEHOUSE", address: "7oXNE1dbpHUp6dn1JF8pRgCtzfCy4P2FuBneWjZHpump" },
 ];
 
 // ─── Counterparty Network Mapper ────────────────────────────────────────────

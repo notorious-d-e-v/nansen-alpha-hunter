@@ -48,8 +48,6 @@ The initial alpha scan is a **screening tool**, not a buy signal. Every candidat
 | SM routing to exit | Transfers | "Former Smart Trader -> Titan bot -> OKX" chains |
 | Top PnL traders fully exited | PnL Leaderboard | still_holding_balance_ratio < 0.1 for majority |
 | Linked holders (same funder) | Related Wallets | Multiple top holders share the same First Funder |
-| Circular wash transfers | Transfers | Bot→Wallet→Bot for same $ amount (fake volume) |
-| Deployer in transfer chain | Transfers | "Token Deployer" label appearing in transfer recipients |
 
 ### Green Flags (need multiple to build conviction)
 
@@ -237,6 +235,32 @@ The alpha signal may not be in any single sort — it's in the **combination**: 
 - `value_usd DESC` shows SM's portfolio, not their current activity — 0% change means holding, not buying.
 - The best signal: `holders_count DESC` filtered for positive `balance_24h_percent_change` — broad interest + active growth.
 - Large declining positions (`balance_24h_percent_change << 0` + high `value_usd`) = SM exit warning.
+
+---
+
+## Lesson 11: Pump.fun PDAs Look Like Deployer Bots — Don't Be Fooled
+
+**What we assumed:** Bot [7QYs4kR7] distributing ~$9.8k each to 3 top holders of WHITEHOUSE was an insider distribution ring. Circular transfers (Bot↔Wallet for same amounts) looked like wash trading.
+
+**What we found:** Profiling the bot revealed:
+- **Related Wallets:** "Deployed by" and "PDA Owned by" `🤖 🏦 Pump.fun` — it's the token's bonding curve contract
+- 976 trades, 1 token, 0% win rate, -$6.4k PnL — a protocol contract, not a trader
+- All counterparties had near-equal in/out volume — standard bonding curve buy/sell mechanics
+- The "circular transfers" were just users buying then selling through the same bonding curve
+
+**Why this matters for pump.fun tokens:** Every buyer interacts with the same bonding curve PDA. So when Counterparties shows "3 holders all share the same top counterparty," that's not collusion — it's the protocol itself. On pump.fun, the bonding curve PDA will **always** be the shared counterparty.
+
+**How to distinguish pump.fun PDA from real insiders:**
+- Check Related Wallets on the bot: "Deployed by Pump.fun" / "PDA Owned by Pump.fun" = protocol infrastructure
+- PDAs trade only 1 token, have 0% win rate, and show thousands of trades
+- Real insider bots trade multiple tokens, have non-zero win rates, and show targeted distribution patterns
+
+**What still held up from WHITEHOUSE analysis:**
+- Holders #1 and #3 sharing the same First Funder (Distributor [DQ5JWbJy]) — still a legitimate linked-wallet finding
+- 0/10 PnL traders still holding — the exit signal is real regardless of mechanism
+- DanySlicer (deployer) was confirmed as a real person: funded from MEXC, deployed 2 programs, small-time memecoin trader with 44% win rate
+
+**Takeaway:** On pump.fun tokens, always profile the "bot" via Related Wallets before flagging it as an insider. Remove "circular wash transfers" and "deployer in transfer chain" from automatic red flags — they're normal pump.fun behavior. Focus on: linked First Funders, PnL exit ratios, and holder quality.
 
 ---
 
