@@ -189,15 +189,39 @@ The alpha signal may not be in any single sort — it's in the **combination**: 
 
 ---
 
+## Lesson 9: Counterparties Reveal Hidden Concentration and Sybil Risk
+
+**What we tested:** Ran Counterparties ($0.05/wallet) on top 5 non-LP holders of PUNCH and LOBSTAR to map their wallet networks and check for coordinated activity.
+
+**PUNCH findings — sybil risk MODERATE-HIGH:**
+- **Direct holder link:** punchkun.sol (#1, 3.81%) ↔ hyperwynn.sol (#2, 2.49%) — 5 direct transactions, $11k volume. Combined 6.3% of supply from what's likely a single entity.
+- **Multi-wallet operator:** 👤 Ily (#3, 1.85%) — top 3 counterparties are all other "Ily" wallets. One person spread across multiple addresses.
+- **Insider distribution:** Distributor (#4, 1.59%) sent $57.3k one-way to an unlabeled address. Connected to "Punchzi Token Deployer."
+- **Real concentration is ~2x reported.** Holders page shows 5 independent wallets at 11.1% combined; in reality, linked entities control a larger share.
+
+**LOBSTAR findings — sybil risk LOW-MODERATE:**
+- No direct holder-to-holder transactions.
+- Holders #4 and #5 share the same top counterparty (Trading Bot [AgmLJBMD]) with massive volume — possibly same operator.
+- Holder #1 is isolated, exchange-funded (Binance). Clean.
+- OKX DEX is the universal routing hub (4/5 holders use it) — shared infrastructure, not collusion.
+
+**Key insight:** The Holders endpoint shows "5 independent wallets" but Counterparties reveals the *actual* ownership graph. Linked wallets, multi-wallet operators, and insider distributors make reported concentration deceptively low.
+
+**Takeaway:** Run Counterparties on top 3-5 holders as part of the X-ray phase. Red flags: direct holder-to-holder transactions, same entity labels across counterparty lists, one-way high-volume transfers to unlabeled wallets. Cost: $0.25-0.30 per token (holders + 5 counterparty calls).
+
+**API note:** Highly active wallets may timeout on Counterparties (hyperwynn.sol returned 500). Use shorter date ranges or skip those wallets.
+
+---
+
 ## What We Haven't Tested Yet
 
 - [x] Filtering by `net_flow_1h_usd DESC` to find fresh SM entries — **small flows are noise** (Lesson 4)
 - [ ] Filtering by `net_flow_1h_usd DESC` + `trader_count` 1-3 — needs validation over time (could be deployer trap OR early breakout)
 - [x] Cross-referencing SM DEX Trades with Flow Intel to confirm whale alignment — **convergence is necessary but not sufficient; divergence is a reliable kill signal** (Lesson 8)
+- [x] Using Counterparties to map wallet networks around top holders — **reveals hidden concentration, linked wallets, and sybil risk** (Lesson 9)
 - [ ] Refined: large flow + trader_count 2-5 + token_age > 14d (excludes deployer traps)
 - [ ] Using `balance_24h_percent_change DESC` on SM Holdings for active accumulation
 - [ ] Tracking a token through time (run X-ray daily to detect phase transitions)
-- [ ] Using Counterparties to map wallet networks around a token's top holders
 - [ ] Perp data correlation: do perp traders front-run spot SM entries?
 - [ ] Scheduled scanning: run alpha scanner every 1-4 hours, log results over days, look for patterns
 - [ ] Alert system: auto-flag tokens matching "high 1h flow + low trader count" for immediate deep dive
