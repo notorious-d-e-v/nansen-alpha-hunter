@@ -714,6 +714,98 @@ Real-time DEX trades from smart money wallets.
 | `date` | `{"from": "YYYY-MM-DD", "to": "YYYY-MM-DD"}` | Most endpoints |
 | `timeframe` | `"1h"`, `"4h"`, `"12h"`, `"24h"`, `"7d"`, `"30d"` | Token Screener |
 
+---
+
+## Sorting
+
+Use the `order_by` parameter (NOT `sort`) with an array of sort objects. Directions are uppercase `ASC` or `DESC`.
+
+```json
+{
+  "order_by": [
+    { "field": "net_flow_24h_usd", "direction": "DESC" }
+  ]
+}
+```
+
+### Sortable Fields by Endpoint
+
+**Smart Money Net Flow** (`/api/v1/smart-money/netflow`):
+`net_flow_1h_usd`, `net_flow_24h_usd`, `net_flow_7d_usd`, `net_flow_30d_usd`, `trader_count`, `market_cap_usd`
+
+**Smart Money Holdings** (`/api/v1/smart-money/holdings`):
+`value_usd`, `balance_24h_percent_change`, `holders_count`, `share_of_holdings_percent`, `market_cap_usd`, `token_age_days`
+
+**Smart Money DEX Trades** (`/api/v1/smart-money/dex-trades`):
+`chain`, `block_timestamp`, `transaction_hash`, `trade_value_usd` (and likely all response fields)
+> Note: The docs say `timestamp`, `value_usd`, `amount` but the API actually uses the full response field names.
+
+**Token Screener** (`/api/v1/token-screener`):
+`chain`, `token_address`, `token_symbol`, `market_cap_usd`, `volume`
+> Note: The docs list more fields but the API only accepts these 5 as of March 2026.
+
+**TGM Holders** (`/api/v1/tgm/holders`):
+`balance_usd`, `balance_change_24h_usd`, `first_transfer_timestamp`, `last_transfer_timestamp`
+
+**PnL Leaderboard** (`/api/v1/tgm/pnl-leaderboard`):
+`realized_pnl_usd`, `unrealized_pnl_usd`, `total_pnl_usd`, `roi_percent`
+
+> Always specify `order_by` when paginating to get consistent results across pages.
+
+---
+
+## Filtering
+
+Filters are passed as top-level fields in the request body alongside other parameters.
+
+### Filter Types
+
+**NumericRangeFilter** - For float values. Use `{"min": N}` and/or `{"max": N}` (both inclusive):
+- `market_cap_usd`, `price_usd`, `value_usd`, `volume_24h_usd`
+
+```json
+{
+  "market_cap_usd": { "min": 100000, "max": 50000000 }
+}
+```
+
+**IntegerRangeFilter** - For whole numbers. Same `min`/`max` format:
+- `holder_count`, `token_age_days`, `trade_count`
+
+```json
+{
+  "token_age_days": { "min": 7, "max": 90 }
+}
+```
+
+**LabelFilter** - Filter by Nansen smart money/entity labels:
+- `include_smart_money_labels`: `["Fund", "Smart Trader", "Public Figure", "Exchange", "Whale"]`
+- `exclude_labels`: same values
+
+**SectorsFilter** - Filter by token category:
+- Values: `"DeFi"`, `"Meme"`, `"Gaming"`, `"NFT"`, `"Infrastructure"`, `"Layer 1"`, `"Layer 2"`, `"Stablecoin"`, `"AI"`, `"RWA"`
+
+**BooleanFilter** - Flags:
+- `hide_spam_tokens`: `true` / `false`
+- `only_new_positions`: `true` / `false`
+
+### Example: Filtered + Sorted Request
+
+```json
+{
+  "chains": ["solana"],
+  "timeframe": "24h",
+  "market_cap_usd": { "min": 100000, "max": 50000000 },
+  "token_age_days": { "min": 3, "max": 90 },
+  "hide_spam_tokens": true,
+  "order_by": [
+    { "field": "smart_money_holder_count", "direction": "DESC" }
+  ]
+}
+```
+
+---
+
 ## Cost Summary
 
 | Tier | Cost | Endpoints |
