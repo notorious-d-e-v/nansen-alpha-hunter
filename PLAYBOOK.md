@@ -47,6 +47,9 @@ The initial alpha scan is a **screening tool**, not a buy signal. Every candidat
 | Top holders are losers | Holders + PnL Summary per wallet | Win rate <30%, negative realized PnL |
 | SM routing to exit | Transfers | "Former Smart Trader -> Titan bot -> OKX" chains |
 | Top PnL traders fully exited | PnL Leaderboard | still_holding_balance_ratio < 0.1 for majority |
+| Linked holders (same funder) | Related Wallets | Multiple top holders share the same First Funder |
+| Circular wash transfers | Transfers | Bot→Wallet→Bot for same $ amount (fake volume) |
+| Deployer in transfer chain | Transfers | "Token Deployer" label appearing in transfer recipients |
 
 ### Green Flags (need multiple to build conviction)
 

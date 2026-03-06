@@ -35,9 +35,7 @@ async function callEndpoint<T>(path: string, body: Record<string, any>): Promise
 // ─── Tokens to investigate ──────────────────────────────────────────────────
 
 const TARGETS = [
-  { symbol: "NEET", address: "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" },
-  { symbol: "FOMO", address: "Huh3G975pLP3WTXKDnsaCTu7enAoFsHMFJCbFLeNpump" },
-  { symbol: "PUNCH", address: "NV2RYH954cTJ3ckFUpvfqaQXU4ARqqDH3562nFSpump" },  // control: known exit phase
+  { symbol: "WHITEHOUSE", address: "7oXNE1dbpHUp6dn1JF8pRgCtzfCy4P2FuBneWjZHpump" },
 ];
 
 const TODAY = "2026-03-06";

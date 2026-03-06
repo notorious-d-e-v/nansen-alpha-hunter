@@ -1,0 +1,14 @@
+{
+  "description": "Tokens to track over time for phase transition detection",
+  "tokens": [
+    {
+      "symbol": "SHAPE",
+      "address": "4HhWcsfjaWYKJtjaxd4EyGSAL4Ky8C3DvqAWPHnrpump",
+      "added": "2026-03-06",
+      "reason": "6 SM holders, +30% balance change, all top 10 accumulating, 79% win rate holder. But 7/10 PnL traders exited. Watch if accumulation holds or follows exit pattern.",
+      "initial_mcap": 1627820,
+      "initial_age_days": 4,
+      "status": "watching"
+    }
+  ]
+}
