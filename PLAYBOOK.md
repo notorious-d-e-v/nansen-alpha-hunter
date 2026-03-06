@@ -62,18 +62,37 @@ The initial alpha scan is a **screening tool**, not a buy signal. Every candidat
 
 ---
 
-## Lesson 4: Sorting Strategy - What's Validated vs Hypotheses
+## Lesson 4: Small 1h Flow on High-Count Tokens is Noise
+
+**What we assumed:** `net_flow_1h_usd DESC` would catch tokens where SM is buying RIGHT NOW, acting as a leading indicator vs the lagging `trader_count`.
+
+**What we tested:** Ran alpha scanner v2 with 3 SM Net Flow views (1h, 24h, trader_count). NEET ($2.1k 1h flow, 6 traders, "accelerating") and FOMO ($321 1h flow, 2 traders, "accelerating") were top 1h-flow candidates.
+
+**What we found:** Both tokens failed X-ray validation — same exit-phase pattern as before:
+- NEET: 8 sells vs 2 buys on DEX. $208k to exchanges vs $63k from. "Former Smart Trader" routing through "NEET Distributor." Top holders had 0 trades.
+- FOMO: 7/10 top PnL traders fully exited (0% still held). ROIs of 550-2314% — they already made their money. $263k mcap with thin liquidity.
+
+**Why small 1h flows fail:** $321-$2.1k inflows on tokens that already have 2-25 SM wallets represent noise: last stragglers, bots, or arbitrage. Not genuine fresh accumulation.
+
+**Takeaway:** Small `net_flow_1h_usd` ($0-5k) on tokens with existing SM presence is NOT a leading indicator. It's the tail end of the same lagging signal. **PARTIALLY INVALIDATED.**
+
+**Remaining hypothesis:** Large 1h inflows (>$10k+) on tokens with LOW existing trader count (1-3 wallets) might still be a valid leading signal — this represents genuinely *new* SM interest, not stragglers on an old trade. **UNTESTED.**
+
+---
+
+## Lesson 5: Sorting Strategy - What's Validated vs Hypotheses
 
 ### Validated
 - `trader_count DESC` shows where SM *was* (lagging, often means exit phase) - **CONFIRMED**
+- Small `net_flow_1h_usd` on high-count tokens is noise, not a leading signal - **CONFIRMED**
 
 ### Hypotheses to Test
-- `net_flow_1h_usd DESC` may catch tokens where SM is buying RIGHT NOW (leading signal) - **UNTESTED**
+- Large `net_flow_1h_usd` (>$10k) + low `trader_count` (1-3) = fresh SM entry - **UNTESTED**
 - `balance_24h_percent_change DESC` on SM Holdings may show active accumulation - **UNTESTED**
 - `net_flow_7d_usd DESC` with `net_flow_1h_usd` near zero may signal fading interest - **UNTESTED**
 
 ### Working theory
-1-hour flow may be a leading indicator while 7-day trader count is a lagging indicator. If true, the alpha is in the gap between them. **Needs validation.**
+The alpha signal may not be in any single sort — it's in the **combination**: high recent flow + low historical trader count = new discovery. Tokens where SM is arriving (not where they've been). **Needs validation.**
 
 ---
 
@@ -113,18 +132,31 @@ The initial alpha scan is a **screening tool**, not a buy signal. Every candidat
 
 | Phase | Cost | Purpose |
 |-------|------|---------|
-| Alpha Scanner | $0.22 | Screen ~20 candidates |
+| Alpha Scanner | $0.27 | Screen ~20 candidates |
 | Deep Dive (x3) | $0.36 | Narrow to top 3 |
 | X-Ray (x3) | $0.42 | Final validation |
-| **Total** | **$1.00** | Full pipeline, 20 screened -> 3 deep dived -> final picks |
+| **Total** | **$1.05** | Full pipeline, 20 screened -> 3 deep dived -> final picks |
+
+---
+
+## Lesson 6: Alpha is Time-Dependent — Single Snapshots Aren't Enough
+
+**What we observed:** Two full pipeline runs (scanner -> deep dive -> X-ray) produced zero actionable entries. Every candidate was in exit phase.
+
+**Why this is expected:** A single scan is a snapshot. SM accumulation happens in windows — a token might only show the "high 1h flow + low trader count" pattern for a few hours before either price runs or interest fades. Checking once and finding nothing doesn't invalidate the pipeline; it means the market wasn't offering opportunities at that moment.
+
+**Takeaway:** The pipeline's value comes from **repeated scans over time** — hourly or every few hours across days. The goal is to be ready when the signal appears, not to expect every scan to produce alpha. Consider automating scans on a schedule (cron/interval) and only alerting when a candidate passes Phase 1 filters with strong 1h-flow + low-count characteristics.
 
 ---
 
 ## What We Haven't Tested Yet
 
-- [ ] Filtering by `net_flow_1h_usd DESC` to find fresh SM entries (not lagging interest)
+- [x] Filtering by `net_flow_1h_usd DESC` to find fresh SM entries — **small flows are noise** (Lesson 4)
+- [ ] Filtering by `net_flow_1h_usd DESC` + `trader_count` 1-3 (large flow, low count = true fresh entry)
 - [ ] Using `balance_24h_percent_change DESC` on SM Holdings for active accumulation
 - [ ] Cross-referencing SM DEX Trades with Flow Intel to confirm whale alignment
 - [ ] Tracking a token through time (run X-ray daily to detect phase transitions)
 - [ ] Using Counterparties to map wallet networks around a token's top holders
 - [ ] Perp data correlation: do perp traders front-run spot SM entries?
+- [ ] Scheduled scanning: run alpha scanner every 1-4 hours, log results over days, look for patterns
+- [ ] Alert system: auto-flag tokens matching "high 1h flow + low trader count" for immediate deep dive

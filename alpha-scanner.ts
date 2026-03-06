@@ -77,11 +77,13 @@ interface ScoredToken {
   market_cap_usd: number;
   token_age_days: number;
   // Smart Money signals
+  sm_net_flow_1h: number;
   sm_net_flow_24h: number;
   sm_trader_count: number;
   sm_flow_trend: "accelerating" | "steady" | "decelerating" | "new";
   sm_recent_buys: number;
   sm_recent_buy_usd: number;
+  sm_sources: string[];
   // Flow Intel signals
   whale_flow: number;
   exchange_flow: number;
@@ -126,32 +128,54 @@ async function callEndpoint<T>(path: string, body: Record<string, any>): Promise
 // ─── Phase 1: Smart Money Net Flow ──────────────────────────────────────────
 
 async function getSmartMoneyNetFlow(): Promise<SmartMoneyFlow[]> {
-  console.log("\n[1/4] Fetching Smart Money Net Flow - 2 views ($0.10)...");
+  console.log("\n[1/4] Fetching Smart Money Net Flow - 3 views ($0.15)...");
 
-  // View A: Sort by trader_count (broad conviction)
-  const byConviction = await callEndpoint<{ data: SmartMoneyFlow[] }>("/api/v1/smart-money/netflow", {
-    chains: ["solana"],
-    order_by: [{ field: "trader_count", direction: "DESC" }],
-  });
-  console.log(`  By conviction: ${byConviction.data.length} tokens`);
-
-  // View B: Sort by net_flow_1h (what's hot RIGHT NOW)
-  const byMomentum = await callEndpoint<{ data: SmartMoneyFlow[] }>("/api/v1/smart-money/netflow", {
+  // View A: Sort by 1h flow (LEADING signal - what's being bought RIGHT NOW)
+  const by1h = await callEndpoint<{ data: SmartMoneyFlow[] }>("/api/v1/smart-money/netflow", {
     chains: ["solana"],
     order_by: [{ field: "net_flow_1h_usd", direction: "DESC" }],
   });
-  console.log(`  By 1h momentum: ${byMomentum.data.length} tokens`);
+  console.log(`  By 1h momentum: ${by1h.data.length} tokens`);
 
-  // Merge and dedupe
-  const seen = new Set<string>();
-  const merged: SmartMoneyFlow[] = [];
-  for (const item of [...byConviction.data, ...byMomentum.data]) {
-    if (!seen.has(item.token_address)) {
-      seen.add(item.token_address);
-      merged.push(item);
+  // View B: Sort by 24h flow (ongoing accumulation)
+  const by24h = await callEndpoint<{ data: SmartMoneyFlow[] }>("/api/v1/smart-money/netflow", {
+    chains: ["solana"],
+    order_by: [{ field: "net_flow_24h_usd", direction: "DESC" }],
+  });
+  console.log(`  By 24h accumulation: ${by24h.data.length} tokens`);
+
+  // View C: Sort by trader_count (broad interest - LAGGING, used for context only)
+  const byCount = await callEndpoint<{ data: SmartMoneyFlow[] }>("/api/v1/smart-money/netflow", {
+    chains: ["solana"],
+    order_by: [{ field: "trader_count", direction: "DESC" }],
+  });
+  console.log(`  By trader count (context): ${byCount.data.length} tokens`);
+
+  // Merge and dedupe, but tag the source
+  const seen = new Map<string, SmartMoneyFlow & { _sources: string[] }>();
+  for (const item of by1h.data) {
+    seen.set(item.token_address, { ...item, _sources: ["1h"] });
+  }
+  for (const item of by24h.data) {
+    const existing = seen.get(item.token_address);
+    if (existing) {
+      existing._sources.push("24h");
+    } else {
+      seen.set(item.token_address, { ...item, _sources: ["24h"] });
     }
   }
-  console.log(`  Merged: ${merged.length} unique tokens`);
+  for (const item of byCount.data) {
+    const existing = seen.get(item.token_address);
+    if (existing) {
+      existing._sources.push("count");
+    } else {
+      seen.set(item.token_address, { ...item, _sources: ["count"] });
+    }
+  }
+
+  const merged = [...seen.values()];
+  const multiSource = merged.filter(t => t._sources.length > 1);
+  console.log(`  Merged: ${merged.length} unique tokens (${multiSource.length} appear in multiple views)`);
   return merged;
 }
 
@@ -227,34 +251,58 @@ function scoreToken(token: Partial<ScoredToken>): { alpha: number; risk: number;
 
   // === ALPHA SIGNALS ===
 
-  // Smart money accumulation strength
-  if ((token.sm_net_flow_24h ?? 0) > 10000) {
-    alpha += 15;
-    signals.push(`SM accumulating $${((token.sm_net_flow_24h ?? 0) / 1000).toFixed(1)}k/24h`);
-  }
-  if ((token.sm_net_flow_24h ?? 0) > 50000) {
-    alpha += 10;
+  // 1H FLOW: The hypothesized leading indicator
+  const flow1h = token.sm_net_flow_1h ?? 0;
+  if (flow1h > 5000) {
+    alpha += 20;
+    signals.push(`1H SM inflow: $${(flow1h / 1000).toFixed(1)}k (ACTIVE NOW)`);
+  } else if (flow1h > 1000) {
+    alpha += 12;
+    signals.push(`1H SM inflow: $${(flow1h / 1000).toFixed(1)}k`);
+  } else if (flow1h > 0) {
+    alpha += 5;
+    signals.push(`1H SM inflow: $${flow1h.toFixed(0)}`);
   }
 
-  // Multiple smart money wallets = broad conviction
-  if ((token.sm_trader_count ?? 0) >= 5) {
+  // 24h accumulation (supporting signal)
+  if ((token.sm_net_flow_24h ?? 0) > 10000) {
+    alpha += 10;
+    signals.push(`24h SM: $${((token.sm_net_flow_24h ?? 0) / 1000).toFixed(1)}k`);
+  } else if ((token.sm_net_flow_24h ?? 0) > 5000) {
+    alpha += 5;
+  }
+
+  // Appears in multiple sort views (1h + 24h + count) = convergent signal
+  const sources = token.sm_sources ?? [];
+  if (sources.length >= 3) {
     alpha += 15;
-    signals.push(`${token.sm_trader_count} SM wallets involved`);
-  } else if ((token.sm_trader_count ?? 0) >= 3) {
+    signals.push("In ALL 3 SM views (1h + 24h + count)");
+  } else if (sources.length >= 2) {
+    alpha += 8;
+    signals.push(`In ${sources.join(" + ")} SM views`);
+  }
+
+  // Multiple SM wallets (context, not primary)
+  if ((token.sm_trader_count ?? 0) >= 5) {
     alpha += 8;
     signals.push(`${token.sm_trader_count} SM wallets`);
+  } else if ((token.sm_trader_count ?? 0) >= 3) {
+    alpha += 4;
   }
 
-  // Accelerating flow (1h > 24h trend)
+  // Flow acceleration: 1h rate exceeds 24h average hourly rate
   if (token.sm_flow_trend === "accelerating") {
     alpha += 10;
-    signals.push("SM flow accelerating");
+    signals.push("Flow ACCELERATING (1h > 24h avg/hr)");
   }
 
-  // Recent buy activity
+  // Recent buy activity from SM DEX Trades
   if ((token.sm_recent_buys ?? 0) >= 3) {
     alpha += 10;
     signals.push(`${token.sm_recent_buys} recent SM buys`);
+  } else if ((token.sm_recent_buys ?? 0) >= 1) {
+    alpha += 5;
+    signals.push(`${token.sm_recent_buys} recent SM buy`);
   }
 
   // Whale buying
@@ -349,8 +397,8 @@ async function scan() {
   await initClient();
 
   console.log("╔══════════════════════════════════════════════════════════════╗");
-  console.log("║           NANSEN x402 SOLANA ALPHA SCANNER                  ║");
-  console.log("║     Cost: ~$0.22 base + $0.01/flow-intel (top 10)           ║");
+  console.log("║           NANSEN x402 SOLANA ALPHA SCANNER v2               ║");
+  console.log("║   1h-flow hypothesis | $0.27 base + $0.01/flow-intel        ║");
   console.log("╚══════════════════════════════════════════════════════════════╝");
 
   // Phase 1 & 2: Parallel fetch of SM Net Flow + SM DEX Trades + Token Screener
@@ -381,14 +429,16 @@ async function scan() {
   // Build candidate list from SM Net Flow (tokens being accumulated)
   const candidates = new Map<string, Partial<ScoredToken>>();
 
-  for (const flow of smFlows) {
+  for (const flow of smFlows as (SmartMoneyFlow & { _sources?: string[] })[]) {
     candidates.set(flow.token_address, {
       token_address: flow.token_address,
       token_symbol: flow.token_symbol,
       market_cap_usd: flow.market_cap_usd,
       token_age_days: flow.token_age_days,
+      sm_net_flow_1h: flow.net_flow_1h_usd,
       sm_net_flow_24h: flow.net_flow_24h_usd,
       sm_trader_count: flow.trader_count,
+      sm_sources: flow._sources ?? [],
       sm_flow_trend:
         flow.net_flow_1h_usd > 0 && flow.net_flow_24h_usd > 0 && flow.net_flow_1h_usd > flow.net_flow_24h_usd / 24
           ? "accelerating"
@@ -409,8 +459,10 @@ async function scan() {
         token_symbol: screenerData?.token_symbol ?? "???",
         market_cap_usd: screenerData?.market_cap_usd ?? 0,
         token_age_days: screenerData?.token_age_days ?? 0,
+        sm_net_flow_1h: 0,
         sm_net_flow_24h: 0,
         sm_trader_count: buys.traders.size,
+        sm_sources: ["trades"],
         sm_flow_trend: "new",
       });
     }
@@ -468,11 +520,13 @@ async function scan() {
       token_symbol: candidate.token_symbol ?? "???",
       market_cap_usd: candidate.market_cap_usd ?? 0,
       token_age_days: candidate.token_age_days ?? 0,
+      sm_net_flow_1h: candidate.sm_net_flow_1h ?? 0,
       sm_net_flow_24h: candidate.sm_net_flow_24h ?? 0,
       sm_trader_count: candidate.sm_trader_count ?? 0,
       sm_flow_trend: candidate.sm_flow_trend ?? "new",
       sm_recent_buys: candidate.sm_recent_buys ?? 0,
       sm_recent_buy_usd: candidate.sm_recent_buy_usd ?? 0,
+      sm_sources: candidate.sm_sources ?? [],
       whale_flow: candidate.whale_flow ?? 0,
       exchange_flow: candidate.exchange_flow ?? 0,
       fresh_wallet_flow: candidate.fresh_wallet_flow ?? 0,
@@ -511,9 +565,9 @@ async function scan() {
       ? `$${(t.market_cap_usd / 1_000_000).toFixed(1)}M`
       : `$${(t.market_cap_usd / 1000).toFixed(0)}k`;
 
-    console.log(`\n#${i + 1} ${t.token_symbol} (${mcapStr} mcap, ${t.token_age_days}d old)`);
+    console.log(`\n#${i + 1} ${t.token_symbol} (${mcapStr} mcap, ${t.token_age_days}d old) [${t.sm_sources.join("+")}]`);
     console.log(`   Alpha: ${t.alpha_score} | Risk: ${t.risk_score} | Net: ${net}`);
-    console.log(`   SM Flow 24h: $${(t.sm_net_flow_24h / 1000).toFixed(1)}k | Traders: ${t.sm_trader_count} | Trend: ${t.sm_flow_trend}`);
+    console.log(`   SM Flow 1h: $${(t.sm_net_flow_1h / 1000).toFixed(1)}k | 24h: $${(t.sm_net_flow_24h / 1000).toFixed(1)}k | Traders: ${t.sm_trader_count} | Trend: ${t.sm_flow_trend}`);
     if (t.sm_recent_buys > 0) {
       console.log(`   Recent SM buys: ${t.sm_recent_buys} ($${(t.sm_recent_buy_usd / 1000).toFixed(1)}k)`);
     }
