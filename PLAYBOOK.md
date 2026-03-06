@@ -92,7 +92,7 @@ The initial alpha scan is a **screening tool**, not a buy signal. Every candidat
 
 **Why single-wallet flows on young tokens fail:** On tokens < 7 days old, the "SM wallet" making the large flow is often the deployer or an insider moving supply. Nansen may label these wallets as smart money based on historical activity, but the current flow is supply distribution, not genuine accumulation.
 
-**Takeaway:** When `trader_count = 1` and `token_age_days < 7`, check Transfers for mint/deployer chains before treating the flow as a buy signal. **CONFIRMED TRAP.**
+**Takeaway:** When `trader_count = 1` and `token_age_days < 7`, check Transfers for mint/deployer chains before treating the flow as a buy signal. However, this pattern could also indicate a genuine early breakout — needs validation over multiple scans to distinguish deployer activity from real SM discovery. **CAUTION, NOT CONFIRMED TRAP.**
 
 **Additional finding:** Server-side `trader_count` filter is not supported on SM Net Flow (returns 422). Must filter client-side.
 
@@ -169,13 +169,33 @@ The alpha signal may not be in any single sort — it's in the **combination**: 
 
 ---
 
+## Lesson 8: Flow Intel Alignment is Necessary but Not Sufficient
+
+**What we tested:** Cross-referenced SM DEX Trades with Flow Intelligence to check whether whale/exchange/fresh wallet flows converge with SM buying.
+
+**Setup:** Pulled 10 SM DEX trades, aggregated by token (3 had net SM buying), then ran Flow Intel on each to check whale, exchange, fresh wallet, top PnL, and public figure alignment.
+
+**What we found:**
+- Only 1/3 tokens showed alignment (我的刀盾): whales +$14.4k, public figures +$34.4k alongside SM buying
+- BUT X-ray invalidated it: top holders were 25-43% win rate losing traders. Transfer activity thin and circular. The "aligned" flow was real but the underlying token quality was poor.
+- MAXXING showed clear divergence: SM buying but whales selling — correct skip signal.
+- MACHI (deployer trap from Lesson 5) confirmed as mixed — no whale interest.
+
+**Why alignment alone fails:** Flow Intel tells you *who* is buying, but not *why* or *how much conviction*. A whale putting $14k into a token could be 0.001% of their portfolio — a throwaway bet. The X-ray (holder quality, PnL profiles, transfer patterns) is still the final gate.
+
+**What works:** Divergence is a reliable **kill signal**. When SM buys but whales sell (MAXXING), skip it. But convergence (SM + whales + public figures all buying) is only a **qualifying signal**, not a buy signal. It narrows the field but doesn't replace the X-ray.
+
+**Takeaway:** Add whale alignment as a Phase 1 filter to prioritize which tokens get deep-dived, but never skip the X-ray based on Flow Intel alone. Divergence = skip. Convergence = investigate further.
+
+---
+
 ## What We Haven't Tested Yet
 
 - [x] Filtering by `net_flow_1h_usd DESC` to find fresh SM entries — **small flows are noise** (Lesson 4)
-- [x] Filtering by `net_flow_1h_usd DESC` + `trader_count` 1-3 — **single-wallet on young tokens is deployer trap** (Lesson 5)
+- [ ] Filtering by `net_flow_1h_usd DESC` + `trader_count` 1-3 — needs validation over time (could be deployer trap OR early breakout)
+- [x] Cross-referencing SM DEX Trades with Flow Intel to confirm whale alignment — **convergence is necessary but not sufficient; divergence is a reliable kill signal** (Lesson 8)
 - [ ] Refined: large flow + trader_count 2-5 + token_age > 14d (excludes deployer traps)
 - [ ] Using `balance_24h_percent_change DESC` on SM Holdings for active accumulation
-- [ ] Cross-referencing SM DEX Trades with Flow Intel to confirm whale alignment
 - [ ] Tracking a token through time (run X-ray daily to detect phase transitions)
 - [ ] Using Counterparties to map wallet networks around a token's top holders
 - [ ] Perp data correlation: do perp traders front-run spot SM entries?
