@@ -213,14 +213,38 @@ The alpha signal may not be in any single sort — it's in the **combination**: 
 
 ---
 
+## Lesson 10: SM Holdings Reveal Three Tiers of Smart Money Behavior
+
+**What we tested:** Pulled SM Holdings sorted 3 ways (`balance_24h_percent_change DESC`, `value_usd DESC`, `holders_count DESC`) and cross-referenced with Net Flow.
+
+**Three tiers discovered:**
+
+**Tier 1 — Conviction Holds (biggest positions, 0% change):** GEOD ($7.2M), META ($4.5M), RENDER ($3.2M), JUP ($1.7M). SM already positioned, not actively trading. These are the "portfolio core" — useful for understanding what SM believes in long-term, but NOT alpha (the entry was weeks/months ago).
+
+**Tier 2 — Active Accumulation (broadest interest + growing):** SHAPE (6 holders, +30.1% balance, 4d old), NEET (6 holders, +1.0%, 313d). SM is both broadly interested AND adding. This tier is the most interesting for alpha — but NEET already failed our X-ray, and SHAPE is only 4 days old (deployer risk zone).
+
+**Tier 3 — Speculative Micro-Bets (100% change, 1 holder, <$3k):** POKOPIA, OBJECTS, AICOIN, CHUD, LOLA, S.H.I.T. Single SM wallet takes a tiny position in a micro-cap. These are lottery tickets, not conviction — the position size ($0.3-3.1k) relative to the wallet's total portfolio is negligible.
+
+**Cross-reference finding:** Only 4 tokens had BOTH accumulating holdings AND positive net flow. 3 were Tier 3 micro-bets; 1 was NEET (already invalidated). The cross-ref is powerful as a filter but produced no actionable signals at this point in time (reinforces Lesson 7).
+
+**Decline warning:** ORCA was the only large position being actively reduced (-43.4%, $841k). SM exiting a big position = useful avoid signal.
+
+**Takeaway:**
+- `balance_24h_percent_change DESC` is dominated by new micro-bets (100% = went from 0 to something). Filter for `holders_count >= 3` to find genuine multi-wallet accumulation vs single-wallet lottery tickets.
+- `value_usd DESC` shows SM's portfolio, not their current activity — 0% change means holding, not buying.
+- The best signal: `holders_count DESC` filtered for positive `balance_24h_percent_change` — broad interest + active growth.
+- Large declining positions (`balance_24h_percent_change << 0` + high `value_usd`) = SM exit warning.
+
+---
+
 ## What We Haven't Tested Yet
 
 - [x] Filtering by `net_flow_1h_usd DESC` to find fresh SM entries — **small flows are noise** (Lesson 4)
 - [ ] Filtering by `net_flow_1h_usd DESC` + `trader_count` 1-3 — needs validation over time (could be deployer trap OR early breakout)
 - [x] Cross-referencing SM DEX Trades with Flow Intel to confirm whale alignment — **convergence is necessary but not sufficient; divergence is a reliable kill signal** (Lesson 8)
 - [x] Using Counterparties to map wallet networks around top holders — **reveals hidden concentration, linked wallets, and sybil risk** (Lesson 9)
+- [x] Using `balance_24h_percent_change DESC` on SM Holdings — **3 tiers: conviction holds, active accumulation, micro-bets; cross-ref with holders_count to filter noise** (Lesson 10)
 - [ ] Refined: large flow + trader_count 2-5 + token_age > 14d (excludes deployer traps)
-- [ ] Using `balance_24h_percent_change DESC` on SM Holdings for active accumulation
 - [ ] Tracking a token through time (run X-ray daily to detect phase transitions)
 - [ ] Perp data correlation: do perp traders front-run spot SM entries?
 - [ ] Scheduled scanning: run alpha scanner every 1-4 hours, log results over days, look for patterns
